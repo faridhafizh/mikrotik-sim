@@ -8,6 +8,17 @@ import { linkUp } from '../graph'
 import { PORT_KINDS, profilesFor } from '../linkmodel'
 import { confirmRemove, renameDevice, openTerminal, openConfig } from '../actions'
 import { l2Peers } from '../engine'
+import { useUi } from '../stores/ui'
+
+const ui = useUi()
+
+function openFirewallFlow() {
+  ui.openModal({
+    kind: 'firewallFlow',
+    title: 'TACTICAL FIREWALL SCAN',
+    srcDevId: d.value?.id
+  })
+}
 import { arpEntries } from '../ros/arp'
 
 const net = useNet(), guide = useGuide()
@@ -50,6 +61,9 @@ const nothing = computed(() => {
       </button>
       <button class="hex-clip flex items-center gap-1 px-2 py-1 rounded-ctl border border-line text-2xs text-muted hover:bg-panel-2" title="Konfigurasi lewat form (alternatif CLI)"         @click="openConfig(d.id)">
         <SlidersHorizontal :size="13" />Konfigurasi
+      </button>
+      <button class="hex-clip flex items-center gap-1 px-2 py-1 rounded-ctl border border-accent/40 text-2xs text-accent hover:bg-panel-2" title="Simulasi alur paket firewall" @click="openFirewallFlow">
+        <SlidersHorizontal :size="13" />Simulasi Flow Paket
       </button>
       <button class="hex-clip flex items-center gap-1 px-2 py-1 rounded-ctl border border-line text-2xs text-muted hover:bg-panel-2" title="Ubah nama perangkat" @click="renameDevice(d.id)">
         <SquarePen :size="13" />Ubah nama

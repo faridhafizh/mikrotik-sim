@@ -305,6 +305,121 @@ function trace(net, srcId, dstIp, srcIp, nat = true, proto = 'icmp', dport = '')
 }
 
 // Ping = jalur pergi + jalur pulang (balasan di-NAT balik lewat router yang sama)
+// Tactical Firewall Flow Scanner: returns detailed step-by-step chain evaluation across hops
+export function simulatePacketFlow(net, { srcDevId, dstIp, proto = 'icmp', dport = '' }) {
+  converge(net)
+  const src = net.devices[srcDevId]
+  if (!src) return { ok: false, error: 'Source device not found', hops: [] }
+  const s0 = srcOf(src, dstIp)
+  if (!s0) return { ok: false, error: `${src.name}: No route to host`, hops: [] }
+
+  const hops = []
+  let cur = src, s = s0, ingress = null, targetIp = dstIp
+
+  for (let hopNum = 1; hopNum <= 16; hopNum++) {
+    const hopInfo = {
+      hop: hopNum,
+      devId: cur.id,
+      devName: cur.name,
+      devType: cur.type,
+      srcIp: s,
+      dstIp: targetIp,
+      chains: []
+    }
+
+    // 1. Dst-NAT Chain (Prerouting)
+    const dr = (cur.nat || []).map(natNorm).find(n => n.chain === 'dstnat' &&
+      (!n.proto || n.proto === proto) && (!n.dport || String(n.dport) === String(dport)) &&
+      (!n.inIface || n.inIface === ingress) && (!n.dst || inNet(n.dst, targetIp)))
+    if (dr) {
+      const to = dr.redirect ? curToIp(cur, ingress) : dr.toAddr
+      if (to) {
+        targetIp = to
+        hopInfo.chains.push({
+          chain: 'PREROUTING // DST-NAT',
+          action: 'DST-NAT',
+          matchedRule: `action=${dr.action} to-addresses=${to}`,
+          detail: `Destination NAT applied -> new dst ${to}`
+        })
+      }
+    } else {
+      hopInfo.chains.push({ chain: 'PREROUTING // DST-NAT', action: 'PASSTHROUGH', detail: 'No dst-nat rules matched' })
+    }
+
+    // Check if target is locally owned by current node
+    if (owns(cur, targetIp)) {
+      if (cur.id !== srcDevId) {
+        const dropRule = (cur.fw || []).find(r => r.chain === 'input' && hit(r, s, targetIp, proto, dport) && r.action === 'drop')
+        if (dropRule) {
+          hopInfo.chains.push({
+            chain: 'INPUT // FILTER',
+            action: 'DROP',
+            matchedRule: `chain=input action=drop src=${dropRule.src || '*'} dst=${dropRule.dst || '*'}`,
+            detail: `Packet dropped by firewall input rule on ${cur.name}`
+          })
+          hops.push(hopInfo)
+          return { ok: false, finalStatus: 'DROPPED (INPUT CHAIN)', error: `${cur.name}: firewall input drop`, hops }
+        } else {
+          hopInfo.chains.push({ chain: 'INPUT // FILTER', action: 'ACCEPT', detail: 'Accepted into local host/services' })
+        }
+      }
+      hops.push(hopInfo)
+      return { ok: true, finalStatus: 'DELIVERED (LOCAL HOST)', hops }
+    }
+
+    // 2. Forwarding lookup
+    const r = lookup(cur, targetIp)
+    if (!r) {
+      hopInfo.chains.push({ chain: 'ROUTING DECISION', action: 'UNREACHABLE', detail: `No route to ${targetIp}` })
+      hops.push(hopInfo)
+      return { ok: false, finalStatus: 'NO ROUTE', error: `${cur.name}: no route to ${targetIp}`, hops }
+    }
+
+    // 3. Filter Forward Chain
+    if (cur.id !== srcDevId) {
+      const dropRule = (cur.fw || []).find(r => r.chain === 'forward' && hit(r, s, targetIp, proto, dport) && r.action === 'drop')
+      if (dropRule) {
+        hopInfo.chains.push({
+          chain: 'FORWARD // FILTER',
+          action: 'DROP',
+          matchedRule: `chain=forward action=drop src=${dropRule.src || '*'} dst=${dropRule.dst || '*'}`,
+          detail: `Packet dropped by firewall forward rule on ${cur.name}`
+        })
+        hops.push(hopInfo)
+        return { ok: false, finalStatus: 'DROPPED (FORWARD CHAIN)', error: `${cur.name}: firewall forward drop`, hops }
+      } else {
+        hopInfo.chains.push({ chain: 'FORWARD // FILTER', action: 'ACCEPT (default)', detail: 'Forward chain evaluation passed' })
+      }
+
+      // 4. Src-NAT / Masquerade Chain
+      const sr = (cur.nat || []).map(natNorm).find(n => n.chain === 'srcnat' && n.out === r.iface)
+      if (sr) {
+        const o = parse(cur.ifaces.find(i => i.name === r.iface).addr).ip
+        s = o
+        hopInfo.chains.push({
+          chain: 'POSTROUTING // SRC-NAT',
+          action: 'SRC-NAT',
+          matchedRule: `chain=srcnat action=masquerade out-interface=${sr.out}`,
+          detail: `Source address masqueraded to ${o}`
+        })
+      }
+    }
+
+    hops.push(hopInfo)
+
+    // Traverse next L2 hop
+    const via = l2Peers(net, cur.id, r.iface)
+    const nxt = via.find(p => net.devices[p.dev].ifaces.find(i => i.name === p.if)?.addr?.startsWith(r.nh + '/'))
+    if (!nxt) {
+      return { ok: false, finalStatus: 'ARP FAILED', error: `${cur.name}: host ${r.nh} unreachable (ARP failed)`, hops }
+    }
+    ingress = via.find(p => p.dev === nxt.dev)?.if || null
+    cur = net.devices[nxt.dev]
+  }
+
+  return { ok: false, finalStatus: 'TTL EXCEEDED', error: 'TTL exceeded (routing loop?)', hops }
+}
+
 export function ping(net, srcId, dstIp, proto = 'icmp', dport = '') {
   converge(net)
   const src = net.devices[srcId]

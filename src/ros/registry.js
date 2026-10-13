@@ -274,12 +274,30 @@ export function traceOut(c, tool) {
 export function btOut(c) {
   const { net, d, t, q, api } = c
   const ip = q.address || t[1]
-  if (!ip) return api.bad('tool bandwidth-test address=<ip>')
+  if (!ip) return api.bad('tool bandwidth-test address=<ip> [protocol=tcp|udp] [direction=transmit|receive|both] [duration=10s]')
   const rs = api.resolve(net, d, ip)
   if (rs.err) return { out: [rs.err] }
   const r = api.bw(net, d.id, rs.ip)
   if (!r.ok) return { out: [r.err || 'tujuan tidak terjangkau'] }
-  return { out: [`tx: ${r.tx.toFixed(1)} Mbps`, `rx: ${r.rx.toFixed(1)} Mbps`], anim: r.path, ok: true }
+  const proto = (q.protocol || 'tcp').toUpperCase()
+  const dir = (q.direction || 'both').toLowerCase()
+  const duration = q.duration || '5s'
+  const txVal = dir === 'receive' ? 0 : r.tx
+  const rxVal = dir === 'transmit' ? 0 : r.rx
+  const loss = proto === 'UDP' ? '0.1%' : '0.0%'
+  const jitter = proto === 'UDP' ? '1.2ms' : '0.4ms'
+
+  return {
+    out: [
+      `status: running bandwidth test to ${rs.ip} (${proto}, duration ${duration})`,
+      `  tx-current: ${txVal.toFixed(1)} Mbps`,
+      `  rx-current: ${rxVal.toFixed(1)} Mbps`,
+      `  random-loss: ${loss}`,
+      `  jitter: ${jitter}`
+    ],
+    anim: r.path,
+    ok: true
+  }
 }
 
 function dnsPrint(c) {
