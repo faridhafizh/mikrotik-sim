@@ -55,23 +55,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
-  <div class="h-dvh flex flex-col overflow-hidden bg-canvas text-fg" :data-suit="ui.suit" :class="ui.booted ? 'visor-booted' : null">
+  <div class="h-dvh flex flex-col overflow-hidden bg-canvas text-fg" :data-theme="ui.theme">
     <AppTopBar />
     <div class="flex-1 flex flex-col lg:flex-row min-h-0 relative">
       <DeviceRail />
       <main class="flex-1 min-w-0 flex flex-col">
-        <div class="relative flex-1 min-h-0 flex flex-col overflow-hidden">
-          <!-- scanlines overlay -->
-          <div class="scanlines absolute! inset-0 z-10 pointer-events-none" aria-hidden="true"></div>
-          <!-- corner brackets -->
-          <span class="pointer-events-none absolute z-10 top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-accent opacity-70" aria-hidden="true"></span>
-          <span class="pointer-events-none absolute z-10 top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-accent opacity-70" aria-hidden="true"></span>
-          <span class="pointer-events-none absolute z-10 bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-accent opacity-70" aria-hidden="true"></span>
-          <span class="pointer-events-none absolute z-10 bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-accent opacity-70" aria-hidden="true"></span>
-          <!-- suit status strip -->
-          <div class="pointer-events-none absolute z-20 top-0 left-1/2 -translate-x-1/2">
-            <span class="hud-label glass hex-clip block border border-accent/40 text-accent px-3 py-1 whitespace-nowrap">MAXIMUM {{ ui.suit.toUpperCase() }}</span>
-          </div>
+        <div class="relative flex-1 min-h-0 flex flex-col overflow-hidden bg-canvas">
           <TopologyCanvas class="flex-1 min-h-0" />
         </div>
         <TerminalDock v-if="net.selected && net.devices[net.selected]" />
@@ -80,7 +69,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <aside class="shrink-0 border-line bg-chrome overflow-y-auto flex flex-col gap-3 p-3
         fixed inset-x-0 bottom-0 z-30 max-h-[85dvh] rounded-t-panel border-t transition-transform
         lg:static lg:z-auto lg:max-h-none lg:rounded-none lg:border-l lg:w-[320px]"
-        :class="ui.sideOpen ? 'translate-y-0' : 'translate-y-full lg:translate-y-0 lg:hidden'" aria-label="Panel samping">
+        :class="ui.sideOpen ? 'translate-y-0' : 'translate-y-full lg:translate-y-0 lg:hidden'" aria-label="Panel Samping">
         <DeviceInspector v-if="net.selected && net.devices[net.selected]" />
         <SidePanel />
       </aside>

@@ -4,30 +4,35 @@ import { zoomAt, boundsOf, fitView } from '../zoom'
 let seq = 0
 let resolveModal = null
 
-const SUITS = ['power', 'armor', 'cloak']
-const SUIT_PANEL = { power: 'lab', armor: 'monitor', cloak: 'lab' }
-
 export const useUi = defineStore('ui', {
   state: () => {
-    const savedSuit = localStorage.getItem('ml.suit')
+    const savedTheme = localStorage.getItem('ml.theme')
     const savedMuted = localStorage.getItem('ml.muted')
     const seen = !!localStorage.getItem('ml.seen')
     const narrow = window.matchMedia?.('(max-width: 1023px)')?.matches ?? false
+    const theme = savedTheme === 'light' ? 'light' : 'dark'
+
+    // Set initial data-theme attribute on documentElement
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', theme)
+    }
+
     return {
       zoom: 1, pan: { x: 0, y: 0 }, viewport: { w: 0, h: 0 },
-      suit: SUITS.includes(savedSuit) ? savedSuit : 'armor',   // 'power' | 'armor' | 'cloak'
+      theme,                               // 'dark' | 'light'
+      suit: 'armor',                       // fallback property for backward compatibility
       muted: savedMuted === '1',
       booted: seen,
-      panel: 'lab',                       // 'lab' | 'akun'
+      panel: 'lab',                        // 'lab' | 'fleet' | 'monitor' | 'akun'
       sideOpen: !(window.matchMedia?.('(max-width: 900px)')?.matches ?? false),
       termH: narrow ? Math.min(260, Math.round(window.innerHeight * 0.4)) : 260,
       termMin: false,
-      menu: null,                         // { x, y, devId } | null
-      modal: null,                        // { kind, ... , value } | null
-      toasts: [],                         // [{ id, text, kind }]
+      menu: null,                          // { x, y, devId } | null
+      modal: null,                         // { kind, ... , value } | null
+      toasts: [],                          // [{ id, text, kind }]
       welcome: !localStorage.getItem('ml.seen'),
-      focusTerm: 0,                       // penanda permintaan fokus ke input terminal
-      canvasEl: null,                     // elemen <svg>, diisi TopologyCanvas
+      focusTerm: 0,                        // penanda permintaan fokus ke input terminal
+      canvasEl: null,                      // elemen <svg>, diisi TopologyCanvas
       paletteOpen: false
     }
   },
@@ -71,13 +76,20 @@ export const useUi = defineStore('ui', {
       this.modal = null
       if (r) r(value)
     },
+    setTheme(mode) {
+      this.theme = mode === 'light' ? 'light' : 'dark'
+      localStorage.setItem('ml.theme', this.theme)
+      if (typeof document !== 'undefined') {
+        document.documentElement.setAttribute('data-theme', this.theme)
+      }
+      this.notify(`Mode tampilan diubah ke ${this.theme === 'light' ? 'Terang' : 'Gelap'}`)
+    },
+    toggleTheme() {
+      this.setTheme(this.theme === 'light' ? 'dark' : 'light')
+    },
     setSuit(m) {
-      if (!SUITS.includes(m) || m === this.suit) return
-      this.suit = m
-      localStorage.setItem('ml.suit', m)
-      const p = SUIT_PANEL[m]
-      if (p) this.panel = p
-      this.notify(`Maximum ${m.toUpperCase()} engaged`)
+      // Legacy suit setter compatibility
+      this.suit = m || 'armor'
     },
     toggleMute() {
       this.muted = !this.muted

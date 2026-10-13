@@ -19,7 +19,6 @@ watch(() => net.tool, () => { noteDraft.value = null; noteDrag.value = null })
 const motionReduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
 
 const world = computed(() => `translate(${ui.pan.x},${ui.pan.y}) scale(${ui.zoom})`)
-// transform grid hanya di pattern luar; pattern dalam (grid-sm) diwarisi transformnya
 const gridT = computed(() => `translate(${ui.pan.x} ${ui.pan.y}) scale(${ui.zoom})`)
 const devices = computed(() => Object.values(net.devices))
 const wifi = computed(() => wifiLinks({ devices: net.devices }))
@@ -43,7 +42,7 @@ const cables = computed(() => {
       stroke: down ? 'var(--color-danger)' : sel ? 'var(--suit-accent)' : (MEDIUM_STROKE[ct.medium] || 'var(--color-cable)'),
       flowOp: down ? 0.25 : sel ? 0.8 : 0.55,
       mid: cubicPoint(c.p0, c.p1, c.p2, c.p3, 0.5),
-      label: down ? (st.reason === 'port disabled' ? 'DOWN · disabled' : 'DOWN') : `${ct.short} · ${speedLabel(st.speed)}`
+      label: down ? (st.reason === 'port disabled' ? 'NONAKTIF' : 'PUTUS') : `${ct.short} · ${speedLabel(st.speed)}`
     }
   }).filter(Boolean)
 })
@@ -103,8 +102,6 @@ function onWheel(e) {
   const r = svg.value.getBoundingClientRect()
   ui.applyZoom(Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0015)), { x: e.clientX - r.left, y: e.clientY - r.top })
 }
-// Sentinel pointer (di luar event target) supaya gestur multi-jari tetap terlihat
-// walau DeviceNode memakai @pointerdown.stop.
 const pointers = new Map()
 let pinch = null, downPt = null, lastTap = 0
 let pressTimer = 0, press = null
@@ -197,7 +194,6 @@ function onMove(e) {
   if (drag.value) { pendingPt = pt(e); pump() }
 }
 async function onUp(e) {
-  // ketuk dua kali di latar: tampilkan seluruh topologi (praktis di ponsel)
   if (!pointers.size && e?.target?.classList?.contains('bg-hit') && net.tool === 'select') {
     const now = performance.now()
     if (now - lastTap < TAP_MS) ui.fitToContent(net.devices, net.notes)
@@ -209,7 +205,7 @@ async function onUp(e) {
     const x = Math.min(d.x0, d.x1), y = Math.min(d.y0, d.y1)
     const w = Math.abs(d.x1 - d.x0), h = Math.abs(d.y1 - d.y0)
     if (w >= 8 && h >= 8) {
-      const title = await ui.askText({ title: 'Judul catatan', label: 'Judul (boleh kosong untuk kotak polos)', value: '', max: 60, confirm: 'Buat' })
+      const title = await ui.askText({ title: 'Judul Catatan', label: 'Judul (boleh kosong untuk kotak polos)', value: '', max: 60, confirm: 'Buat' })
       if (title !== null) net.addNote({ title, x, y, w, h, color: NOTE_COLORS[0] })
     }
   }
@@ -225,7 +221,6 @@ function down(e, d) {
   drag.value = d.id
   pendingPt = null
   svg.value.setPointerCapture?.(e.pointerId)
-  // tekan-lama (ponsel): buka menu konteks, batalkan drag
   press = { x: e.clientX, y: e.clientY, dev: d.id }
   pressTimer = setTimeout(() => {
     pressTimer = 0
@@ -266,7 +261,6 @@ function measure() { const r = root.value.getBoundingClientRect(); ui.setViewpor
 let ro = null
 onMounted(() => {
   svg.value.addEventListener('wheel', onWheel, { passive: false })
-  // capture phase: gestur multi-jari terlihat walau node memakai @pointerdown.stop
   svg.value.addEventListener('pointerdown', onDownCapture, true)
   svg.value.addEventListener('pointerup', onUpCapture, true)
   svg.value.addEventListener('pointercancel', onUpCapture, true)
@@ -299,15 +293,15 @@ onUnmounted(() => {
           <path d="M 96 0 L 0 0 L 0 96" stroke="var(--color-grid-strong)" fill="none" stroke-width="1" />
         </pattern>
         <filter id="suit-glow" x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="2.5" result="glow" />
+          <feGaussianBlur stdDeviation="2" result="glow" />
           <feMerge>
             <feMergeNode in="glow" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
         <linearGradient id="node-glass" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="var(--color-node)" stop-opacity="0.95" />
-          <stop offset="1" stop-color="var(--color-panel-2)" stop-opacity="0.9" />
+          <stop offset="0" stop-color="var(--color-node)" stop-opacity="0.98" />
+          <stop offset="1" stop-color="var(--color-panel-2)" stop-opacity="0.92" />
         </linearGradient>
       </defs>
 
@@ -358,34 +352,34 @@ onUnmounted(() => {
       </g>
     </svg>
 
-    <div v-if="net.tool === 'note'" class="absolute top-3 left-1/2 -translate-x-1/2 glass hud-label border border-line rounded-pill px-3 py-1.5 text-2xs text-muted">
+    <div v-if="net.tool === 'note'" class="absolute top-3 left-1/2 -translate-x-1/2 bg-chrome shadow-md font-medium border border-line rounded-pill px-3 py-1.5 text-2xs text-fg">
       Tarik kotak di area kosong, lalu isi judul. Esc untuk selesai.
     </div>
 
-    <div v-if="net.tool === 'link'" class="absolute top-3 left-1/2 -translate-x-1/2 glass hud-label border border-line rounded-pill px-3 py-1.5 text-2xs text-muted">
+    <div v-if="net.tool === 'link'" class="absolute top-3 left-1/2 -translate-x-1/2 bg-chrome shadow-md font-medium border border-line rounded-pill px-3 py-1.5 text-2xs text-fg">
       {{ net.from ? 'Klik perangkat tujuan. Esc untuk batal.' : 'Klik perangkat pertama untuk mulai menghubungkan.' }}
     </div>
 
     <div v-if="!devices.length" class="absolute inset-0 grid place-items-center pointer-events-none">
-      <div class="pointer-events-auto glass hex-clip border border-line-strong p-6 text-center flex flex-col items-center gap-2">
-        <b class="hud-label text-[13px] text-accent">NO TACTICAL DATA // DEPLOY UNITS</b>
-        <p class="text-[12px] text-muted">Tarik perangkat dari rail kiri ke kanvas.</p>
-        <button class="hex-clip bg-accent text-accent-fg px-3 py-1.5 text-2xs font-semibold hud-label" @click="net.add('router', (ui.viewport.w / 2 - ui.pan.x) / ui.zoom, (ui.viewport.h / 2 - ui.pan.y) / ui.zoom)">Deploy router</button>
-        <button class="px-2.5 py-1.5 rounded-ctl border border-line text-2xs text-muted hover:bg-panel-2" @click="net.seed(true)">Muat contoh topologi</button>
+      <div class="pointer-events-auto bg-chrome border border-line rounded-xl p-6 text-center flex flex-col items-center gap-2.5 shadow-lg max-w-sm">
+        <b class="text-[14px] text-accent font-bold tracking-wide">KANVAS TOPOLOGI KOSONG</b>
+        <p class="text-[12px] text-muted">Tarik perangkat dari panel kiri ke kanvas atau gunakan template contoh.</p>
+        <button class="rounded-md bg-accent text-accent-fg px-4 py-1.5 text-2xs font-semibold shadow-sm hover:opacity-90 transition-opacity" @click="net.add('router', (ui.viewport.w / 2 - ui.pan.x) / ui.zoom, (ui.viewport.h / 2 - ui.pan.y) / ui.zoom)">Tambah Router</button>
+        <button class="px-3 py-1.5 rounded-md border border-line text-2xs text-muted hover:bg-panel-2 hover:text-fg transition-colors" @click="net.seed(true)">Muat Contoh Topologi</button>
         <div class="flex gap-1.5 mt-1 flex-wrap justify-center">
-          <button v-for="t in TEMPLATES" :key="t.id" :title="t.desc" class="px-2 py-1 rounded-ctl border border-line text-2xs text-muted hover:bg-panel-2" @click="net.applyTemplate(t.id)">{{ t.title }}</button>
+          <button v-for="t in TEMPLATES" :key="t.id" :title="t.desc" class="px-2 py-1 rounded-md border border-line text-2xs text-muted hover:bg-panel-2 hover:text-fg transition-colors" @click="net.applyTemplate(t.id)">{{ t.title }}</button>
         </div>
       </div>
     </div>
 
-    <div class="absolute bottom-3 left-3 flex items-center gap-3 text-2xs text-muted">
+    <div class="absolute bottom-3 left-3 flex items-center gap-3 text-2xs text-muted bg-chrome/80 px-2.5 py-1 rounded-md border border-line backdrop-blur-sm">
       <span class="flex items-center gap-1.5">
         <svg width="20" height="8" aria-hidden="true"><line x1="0" y1="4" x2="20" y2="4" stroke="var(--color-cable)" stroke-width="2.5" stroke-linecap="round" /></svg>
-        <span class="hud-label">Kabel</span>
+        <span class="hud-label font-medium">Kabel</span>
       </span>
       <span class="flex items-center gap-1.5">
         <svg width="20" height="8" aria-hidden="true"><line x1="0" y1="4" x2="20" y2="4" stroke="var(--color-wifi)" stroke-width="2" stroke-dasharray="6 6" /></svg>
-        <span class="hud-label">Wi-Fi</span>
+        <span class="hud-label font-medium">Wi-Fi</span>
       </span>
     </div>
   </div>

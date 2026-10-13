@@ -1,34 +1,38 @@
 <script setup>
+import { Sun, Moon } from 'lucide-vue-next'
 import { useUi } from '../stores/ui'
-import { beep } from '../suitAudio'
 
 const ui = useUi()
-
-const MODES = [
-  { id: 'power', label: 'Power' },
-  { id: 'armor', label: 'Armor' },
-  { id: 'cloak', label: 'Cloak' }
-]
-
-function pick(m) {
-  ui.setSuit(m)
-  beep('mode')
-}
 </script>
 
 <template>
-  <div class="flex items-center gap-1 shrink-0" role="group" aria-label="Suit mode">
+  <div class="flex items-center gap-1 shrink-0" role="group" aria-label="Tema Tampilan">
     <button
-      v-for="m in MODES"
-      :key="m.id"
-      class="hex-clip glass hud-label px-2 py-1 border text-2xs shrink-0 transition-colors"
-      :class="ui.suit === m.id
-        ? 'border-accent text-accent suit-glow'
-        : 'border-line text-muted hover:border-accent/50 hover:text-fg'"
-      :aria-pressed="ui.suit === m.id"
-      :title="'Suit mode: ' + m.label"
-      :aria-label="'Suit mode: ' + m.label"
-      @click="pick(m.id)"
-    >{{ m.label }}</button>
+      class="flex items-center gap-1.5 px-2 py-1 text-2xs rounded-md border shrink-0 transition-colors"
+      :class="ui.theme === 'dark'
+        ? 'bg-accent/15 border-accent text-accent font-semibold'
+        : 'border-line text-muted hover:border-line-strong hover:text-fg'"
+      :aria-pressed="ui.theme === 'dark'"
+      title="Mode Gelap (NOC)"
+      aria-label="Mode Gelap"
+      @click="ui.setTheme('dark')"
+    >
+      <Moon :size="13" />
+      <span class="hud-label">Gelap</span>
+    </button>
+
+    <button
+      class="flex items-center gap-1.5 px-2 py-1 text-2xs rounded-md border shrink-0 transition-colors"
+      :class="ui.theme === 'light'
+        ? 'bg-accent/15 border-accent text-accent font-semibold'
+        : 'border-line text-muted hover:border-line-strong hover:text-fg'"
+      :aria-pressed="ui.theme === 'light'"
+      title="Mode Terang (Resmi)"
+      aria-label="Mode Terang"
+      @click="ui.setTheme('light')"
+    >
+      <Sun :size="13" />
+      <span class="hud-label">Terang</span>
+    </button>
   </div>
 </template>

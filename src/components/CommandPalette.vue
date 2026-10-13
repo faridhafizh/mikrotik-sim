@@ -3,7 +3,7 @@ import { computed, ref, watch, nextTick } from 'vue'
 import { useNet } from '../stores/net'
 import { useUi } from '../stores/ui'
 import { useGuide } from '../stores/guide'
-import { CMDS, kindOf, LABEL_OF } from '../catalog'
+import { CMDS, kindOf } from '../catalog'
 import { isSafeCmd } from '../guide'
 
 const net = useNet(), ui = useUi(), guide = useGuide()
@@ -35,20 +35,20 @@ function key(e) {
 </script>
 
 <template>
-  <div v-if="ui.paletteOpen" class="fixed inset-0 z-50 bg-black/50 grid place-items-start pt-24" @click.self="close()">
-    <div class="glass hex-clip w-[min(560px,92vw)] border border-line rounded-panel shadow-panel overflow-hidden" role="dialog" aria-modal="true" aria-label="Palet perintah">
-      <div class="flex items-center gap-2 px-4 py-2 border-b border-line">
-        <span class="hud-label text-2xs text-accent">PALETTE // COMMAND</span>
+  <div v-if="ui.paletteOpen" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs grid place-items-start pt-24" @click.self="close()">
+    <div class="bg-chrome w-[min(560px,92vw)] border border-line rounded-2xl shadow-2xl overflow-hidden" role="dialog" aria-modal="true" aria-label="Palet perintah">
+      <div class="flex items-center gap-2 px-4 py-2.5 border-b border-line bg-panel-2/40">
+        <span class="hud-label text-2xs font-bold text-accent">PALET PERINTAH SISTEM</span>
         <span class="ml-auto text-2xs text-dim">↑↓ pilih · ↵ jalankan · esc tutup</span>
       </div>
       <input ref="inputEl" v-model="q" placeholder="Ketik perintah, nama perangkat, atau lab…" class="w-full bg-transparent outline-none px-4 py-3 font-mono text-base sm:text-[13px] text-fg border-b border-line" aria-label="Perintah palette" @keydown="key" />
-      <p v-if="guided" class="px-4 py-1.5 text-2xs text-dim border-b border-line">
+      <p v-if="guided" class="px-4 py-1.5 text-2xs text-dim border-b border-line bg-panel-2/20">
         Mode pemula: perintah lanjutan disembunyikan. Ganti ke mode Ahli di bilah atas untuk melihat semuanya.
       </p>
       <ul class="max-h-[320px] overflow-y-auto py-1">
-        <li v-for="(it, i) in items" :key="it.kind + it.label" :class="'px-4 py-1.5 text-[13px] cursor-pointer flex items-center gap-2 ' + (i === hi ? 'bg-panel-2 text-fg' : 'text-muted')" @mouseenter="hi = i" @click="run(i)">
+        <li v-for="(it, i) in items" :key="it.kind + it.label" :class="'px-4 py-2 text-[13px] cursor-pointer flex items-center gap-2 transition-colors ' + (i === hi ? 'bg-panel-2 text-fg font-medium' : 'text-muted hover:text-fg')" @mouseenter="hi = i" @click="run(i)">
           <span class="flex-1 font-mono">{{ it.label }}</span>
-          <span class="text-2xs text-dim">{{ it.sub }}</span>
+          <span class="text-2xs text-dim font-mono">{{ it.sub }}</span>
         </li>
         <li v-if="!items.length" class="px-4 py-3 text-[12px] text-dim">Tidak ada hasil.</li>
       </ul>
