@@ -1,0 +1,136 @@
+@import "tailwindcss";
+@source "../**/*.vue";
+@source "../**/*.js";
+
+@theme {
+  --color-canvas: #04090f;
+  --color-chrome: #071522;
+  --color-panel: rgba(10, 26, 40, .78);
+  --color-panel-2: #0e2a44;
+  --color-node: #0b2237;
+  --color-line: #1b3f5e;
+  --color-line-strong: #2e6a99;
+  --color-fg: #dff3ff;
+  --color-muted: #9fc3dd;
+  --color-dim: #6d93ad;
+  --color-accent: #00e5ff;
+  --color-accent-soft: #7df3ff;
+  --color-accent-fg: #03161d;
+  --color-ok: #3dffa2;
+  --color-danger: #ff5d5d;
+  --color-info: #00e5ff;
+  --color-wifi: #b28bff;
+  --color-grid: #0d2a42;
+  --color-grid-strong: #174a75;
+  --color-cable: #41c8e8;
+  --color-suit-power: #ff7a1a;
+  --color-suit-armor: #00e5ff;
+  --color-suit-cloak: #b28bff;
+  --font-sans: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --radius-ctl: 10px;
+  --radius-panel: 14px;
+  --radius-pill: 999px;
+  --shadow-panel: 0 10px 30px rgba(3, 12, 24, .45);
+  --text-2xs: 10px;
+  --text-2xs--line-height: 14px;
+}
+
+/* Suit-mode accent override: consumed via var(--suit-accent) / text-accent / border-accent */
+:root { --suit-accent: var(--color-suit-armor) }
+[data-suit="power"] { --suit-accent: var(--color-suit-power); --color-accent: var(--color-suit-power) }
+[data-suit="armor"] { --suit-accent: var(--color-suit-armor); --color-accent: var(--color-suit-armor) }
+[data-suit="cloak"] { --suit-accent: var(--color-suit-cloak); --color-accent: var(--color-suit-cloak) }
+
+@layer base {
+  html, body, #app { height: 100%; margin: 0 }
+  body { background: var(--color-canvas); color: var(--color-fg); font-family: var(--font-sans); overscroll-behavior: none }
+  :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 6px }
+  ::-webkit-scrollbar { width: 10px; height: 10px }
+  ::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 999px; border: 2px solid var(--color-panel) }
+  ::-webkit-scrollbar-track { background: transparent }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important } }
+}
+
+.rail-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  overscroll-behavior: contain;
+}
+.rail-scroll:hover,
+.rail-scroll:focus-within,
+.rail-scroll:active {
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+.rail-scroll::-webkit-scrollbar { width: 5px; height: 5px }
+.rail-scroll::-webkit-scrollbar-track { background: transparent }
+.rail-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+  border: none;
+}
+.rail-scroll:hover::-webkit-scrollbar-thumb,
+.rail-scroll:focus-within::-webkit-scrollbar-thumb,
+.rail-scroll:active::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+}
+
+/* Satu-satunya CSS khusus kanvas: hal yang tidak bisa jadi atribut SVG (interaksi/animasi). */
+.wifi-flow { stroke-dasharray: 6 6; animation: dash 1s linear infinite }
+@keyframes dash { to { stroke-dashoffset: -12 } }
+.cable-flow { stroke-dasharray: 2 10; animation: cable-flow 1.2s linear infinite }
+@keyframes cable-flow { to { stroke-dashoffset: -24 } }
+.pkt-move { transition: transform .42s ease-in-out }
+.dev-hit { cursor: grab }
+.dev-hit:hover { filter: brightness(1.12) }
+
+/* Nanosuit HUD utilities — in @layer components so Tailwind utilities
+   (position, text-*, bg-*) still override them when both are applied. */
+@layer components {
+  .hud-label {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    font-size: var(--text-2xs);
+    line-height: var(--text-2xs--line-height);
+  }
+  .glass {
+    background: linear-gradient(180deg, rgba(13, 38, 60, .85), rgba(6, 18, 30, .85));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .hex-clip {
+    clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  }
+  .scanlines { position: relative }
+  .scanlines::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(180deg, rgba(0, 229, 255, .04) 0 1px, transparent 1px 3px);
+    mix-blend-mode: screen;
+  }
+  .suit-glow { animation: suit-glow 2.4s ease-in-out infinite }
+  .caret-blink { animation: hex-pulse 1.05s step-end infinite }
+  .visor-in { animation: visor-in .5s ease-out both }
+}
+@keyframes visor-in {
+  0% { opacity: 0; transform: scaleY(.008); filter: brightness(3) }
+  40% { opacity: 1; filter: brightness(1.6) }
+  100% { opacity: 1; transform: scaleY(1); filter: brightness(1) }
+}
+@keyframes hex-pulse {
+  0%, 100% { opacity: .55 }
+  50% { opacity: 1 }
+}
+@keyframes suit-glow {
+  0%, 100% { box-shadow: 0 0 4px 0 color-mix(in srgb, var(--suit-accent) 45%, transparent) }
+  50% { box-shadow: 0 0 14px 2px color-mix(in srgb, var(--suit-accent) 65%, transparent) }
+}
+
+/* Inspector: bagian lanjutan di mode pemula pakai <details> tanpa marker bawaan */
+.insp-adv > summary { list-style: none; cursor: pointer }
+.insp-adv > summary::-webkit-details-marker { display: none }
+.insp-adv > summary::after { content: ' ▾'; font-size: 9px; color: var(--color-dim) }
+.insp-adv[open] > summary::after { content: ' ▴' }
