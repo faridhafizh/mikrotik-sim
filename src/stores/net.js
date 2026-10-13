@@ -46,7 +46,8 @@ const reduceMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)
 export const useNet = defineStore('net', {
   state: () => {
     const sv = JSON.parse(localStorage.getItem('ml') || 'null')
-    return { devices: {}, links: [], notes: {}, selected: null, selectedNote: null, tool: 'select', from: null, term: {}, packet: null, api: 'unknown', dirty: false, token: sv?.t || '', user: sv?.u || '', labs: [], activeLab: 'lab1', results: {}, topologies: [], done: [], curId: null, past: [], future: [], traceOverlay: null, stats: {}, stepResults: {}, versions: [] }
+    const customLabs = (() => { try { return JSON.parse(localStorage.getItem('ml.customLabs') || '[]') } catch { return [] } })()
+    return { devices: {}, links: [], notes: {}, selected: null, selectedNote: null, tool: 'select', from: null, term: {}, packet: null, api: 'unknown', dirty: false, token: sv?.t || '', user: sv?.u || '', labs: [], customLabs, activeLab: 'lab1', results: {}, topologies: [], done: [], curId: null, past: [], future: [], traceOverlay: null, stats: {}, stepResults: {}, versions: [] }
   },
   actions: {
     note(text, kind) { useUi().notify(text, kind) },
@@ -277,8 +278,28 @@ export const useNet = defineStore('net', {
       try { return this.importData(JSON.parse(await file.text())) }
       catch { this.note('File JSON rusak', 'error'); return false }
     },
+    addCustomLab(lab) {
+      const idx = this.customLabs.findIndex(x => x.id === lab.id)
+      if (idx >= 0) this.customLabs[idx] = lab
+      else this.customLabs.push(lab)
+      try { localStorage.setItem('ml.customLabs', JSON.stringify(this.customLabs)) } catch {}
+      this.syncLabs()
+    },
+    removeCustomLab(id) {
+      this.customLabs = this.customLabs.filter(x => x.id !== id)
+      try { localStorage.setItem('ml.customLabs', JSON.stringify(this.customLabs)) } catch {}
+      this.syncLabs()
+    },
+    syncLabs() {
+      const baseLabs = this.baseLabs || this.labs.filter(x => !x.custom)
+      this.baseLabs = baseLabs
+      this.labs = [...baseLabs, ...this.customLabs]
+    },
     async boot() {
-      this.labs = (await this.call('/labs'))?.labs || []
+      const res = await this.call('/labs')
+      const base = res?.labs || []
+      this.baseLabs = base
+      this.labs = [...base, ...this.customLabs]
       const h = location.hash.match(/^#\/s\/(\w+)/)
       if (h) { const r = await this.call('/shared/' + h[1]); if (r) { this.commit(); this.restore(r.data); this.note('Topologi bersama: ' + r.name, 'info') } }
       if (this.token) await this.refresh()
@@ -353,6 +374,40 @@ export const useNet = defineStore('net', {
       load()
     },
     async checkLab(id) {
+      const lab = this.labs.find(l => l.id === id)
+      if (lab && lab.custom) {
+        const results = []
+        for (const obj of lab.objectives || []) {
+          if (obj.type === 'ping') {
+            const srcDev = Object.keys(this.devices)[0]
+            const p = srcDev ? (await import('../engine.js')).ping(this, srcDev, obj.target) : { ok: false }
+            results.push({ label: obj.label || `Ping reachability to ${obj.target}`, ok: p.ok })
+          } else if (obj.type === 'ifaceIp') {
+            const [devName, ipCidr] = (obj.target || '').split(':')
+            const dev = Object.values(this.devices).find(d => d.name === devName)
+            const has = dev?.ifaces?.some(i => i.addr === ipCidr)
+            results.push({ label: obj.label || `Interface IP ${obj.target}`, ok: !!has })
+          } else if (obj.type === 'route') {
+            const [devName, dstGw] = (obj.target || '').split(':')
+            const dev = Object.values(this.devices).find(d => d.name === devName)
+            const has = dev?.routes?.some(r => `${r.dst}->${r.gw}` === dstGw || r.dst === dstGw)
+            results.push({ label: obj.label || `Route check ${obj.target}`, ok: !!has })
+          } else if (obj.type === 'fw') {
+            const [devName, chainAction] = (obj.target || '').split(':')
+            const dev = Object.values(this.devices).find(d => d.name === devName)
+            const has = dev?.fw?.some(f => `${f.chain}=${f.action}` === chainAction || f.chain === chainAction)
+            results.push({ label: obj.label || `Firewall rule check ${obj.target}`, ok: !!has })
+          } else {
+            results.push({ label: obj.label || 'Objective check', ok: true })
+          }
+        }
+        const passed = results.length > 0 && results.every(x => x.ok)
+        this.results = { ...this.results, [id]: results }
+        if (passed && !this.done.includes(id)) this.done.push(id)
+        this.note(passed ? 'Custom Mission Passed!' : 'Mission Objectives Pending', passed ? 'success' : 'info')
+        return passed
+      }
+
       const r = await this.call(`/labs/${id}/check`, { method: 'POST', body: { topology: this.snap() } })
       if (!r) return
       this.results = { ...this.results, [id]: r.results }

@@ -4,6 +4,7 @@ import { useUi } from '../stores/ui'
 import { HELP, FIDELITY } from '../help'
 import ConfigModal from './ConfigModal.vue'
 import LinkModal from './LinkModal.vue'
+import FirewallFlowModal from './FirewallFlowModal.vue'
 
 const ui = useUi()
 const panel = ref(null)
@@ -48,7 +49,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
     <div class="absolute inset-0 bg-black/50" @click="cancel"></div>
     <div ref="panel" role="dialog" aria-modal="true" aria-labelledby="modal-title"
       class="glass hex-clip relative max-h-[calc(100dvh-2rem)] overflow-y-auto border border-line rounded-panel shadow-panel p-5"
-      :class="ui.modal.kind === 'help' ? 'w-[min(680px,calc(100vw-2rem))]' : 'w-[min(440px,calc(100vw-2rem))]'">
+      :class="ui.modal.kind === 'help' || ui.modal.kind === 'firewallFlow' ? 'w-[min(680px,calc(100vw-2rem))]' : 'w-[min(440px,calc(100vw-2rem))]'">
 
       <h2 id="modal-title" class="hud-label text-[15px] font-bold text-accent">{{ ui.modal.title }}</h2>
       <p v-if="ui.modal.body" class="mt-2 text-[13px] text-muted leading-relaxed">{{ ui.modal.body }}</p>
@@ -64,6 +65,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <ConfigModal v-else-if="ui.modal.kind === 'config'" />
 
       <LinkModal v-else-if="ui.modal.kind === 'link'" />
+
+      <FirewallFlowModal v-else-if="ui.modal.kind === 'firewallFlow'" />
 
       <div v-if="ui.modal.kind === 'help'" class="mt-4 flex flex-col gap-4 text-[13px]">
         <section>

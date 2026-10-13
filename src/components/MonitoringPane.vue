@@ -1,11 +1,22 @@
 <script setup>
-import { computed, onMounted } from 'vue'
-import { Activity, Bell, BellOff, CirclePlay, CircleStop, Trash2 } from 'lucide-vue-next'
+import { ref, computed, onMounted } from 'vue'
+import { Activity, Bell, BellOff, CirclePlay, CircleStop, Trash2, Gauge, ArrowUpRight, ArrowDownLeft, Zap } from 'lucide-vue-next'
 import { useNet } from '../stores/net'
 import { useMonitor } from '../stores/monitor'
 import { sparkPoints } from '../monitor.js'
+import { bw } from '../engine'
 
 const net = useNet(), mon = useMonitor()
+
+const srcDevId = ref('')
+const dstIp = ref('10.0.0.1')
+const activeTestResult = ref(null)
+
+onMounted(() => {
+  mon.backfill()
+  srcDevId.value = Object.keys(net.devices)[0] || ''
+})
+
 const s = computed(() => mon.summary)
 const rows = computed(() => {
   const sum = mon.summary
@@ -15,14 +26,83 @@ const rows = computed(() => {
     spark: sparkPoints((mon.history[id] || []).map(h => (h.total ? h.up / h.total : 1)))
   }))
 })
+
+function runBandwidthTest() {
+  if (!srcDevId.value || !dstIp.value.trim()) return
+  const res = bw(net, srcDevId.value, dstIp.value.trim())
+  if (res.ok) {
+    activeTestResult.value = {
+      ok: true,
+      tx: res.tx,
+      rx: res.rx,
+      path: res.path,
+      target: dstIp.value.trim()
+    }
+  } else {
+    activeTestResult.value = {
+      ok: false,
+      err: res.err || 'Target unreachable'
+    }
+  }
+}
+
 const tile = 'relative flex flex-col glass border border-line rounded-ctl px-2.5 py-1.5 gap-0.5'
-onMounted(() => mon.backfill())
 function toggle() { mon.on ? mon.stop() : mon.start(net) }
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
-    <div class="flex items-center gap-1.5">
+  <div class="flex flex-col gap-3">
+    <!-- Telemetry Bandwidth Test Section -->
+    <div class="glass border border-accent/40 rounded-ctl p-3 flex flex-col gap-2.5 scanlines">
+      <div class="flex items-center gap-1.5">
+        <Gauge :size="16" class="text-accent suit-glow" />
+        <b class="hud-label text-xs text-accent">BANDWIDTH TELEMETRY DIAGNOSTIC</b>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div>
+          <label class="hud-label text-dim block mb-1">Source Node</label>
+          <select v-model="srcDevId" class="w-full bg-panel-2 border border-line rounded-ctl px-2 py-1 text-xs text-fg focus:border-accent outline-none">
+            <option v-for="d in Object.values(net.devices)" :key="d.id" :value="d.id">{{ d.name }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="hud-label text-dim block mb-1">Target IP</label>
+          <input v-model="dstIp" placeholder="10.0.0.1" class="w-full bg-panel-2 border border-line rounded-ctl px-2 py-1 text-xs text-fg focus:border-accent outline-none font-mono" />
+        </div>
+        <div class="flex items-end">
+          <button class="hex-clip w-full bg-accent text-accent-fg font-bold hud-label text-2xs py-1.5 hover:brightness-110 flex items-center justify-center gap-1" @click="runBandwidthTest">
+            <Zap :size="12" /> RUN TEST
+          </button>
+        </div>
+      </div>
+
+      <!-- Test Live Results Display -->
+      <div v-if="activeTestResult" class="mt-1 p-2 bg-panel/80 border border-line rounded-ctl flex flex-col gap-2">
+        <div v-if="activeTestResult.ok" class="grid grid-cols-2 gap-2">
+          <div class="flex items-center gap-2 p-2 bg-panel-2 rounded border border-ok/30">
+            <ArrowUpRight :size="18" class="text-ok" />
+            <div>
+              <span class="hud-label text-[9px] text-dim block">TX THROUGHPUT</span>
+              <span class="text-sm font-bold font-mono text-ok">{{ activeTestResult.tx.toFixed(1) }} Mbps</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 p-2 bg-panel-2 rounded border border-accent/30">
+            <ArrowDownLeft :size="18" class="text-accent" />
+            <div>
+              <span class="hud-label text-[9px] text-dim block">RX THROUGHPUT</span>
+              <span class="text-sm font-bold font-mono text-accent">{{ activeTestResult.rx.toFixed(1) }} Mbps</span>
+            </div>
+          </div>
+        </div>
+        <div v-else class="text-xs text-danger font-mono p-1">
+          FAILURE: {{ activeTestResult.err }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Link Monitoring -->
+    <div class="flex items-center gap-1.5 pt-1">
       <Activity :size="15" class="text-accent" />
       <b class="hud-label text-[13px] text-accent">Monitoring</b>
       <span class="ml-auto flex items-center gap-1">
@@ -37,10 +117,6 @@ function toggle() { mon.on ? mon.stop() : mon.start(net) }
         </select>
       </span>
     </div>
-
-    <p class="text-[12px] text-dim leading-relaxed">
-      Memantau status kabel &amp; IP semua perangkat tiap beberapa detik. Peringatan muncul sebagai notifikasi dan tercatat di bawah.
-    </p>
 
     <div v-if="s" class="grid grid-cols-3 gap-1.5">
       <div :class="tile">

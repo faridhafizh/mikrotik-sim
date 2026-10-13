@@ -1,6 +1,6 @@
 <script setup>
 import { ref, nextTick, computed } from 'vue'
-import { Undo2, Redo2, Save, Upload, Download, ImageDown, CircleQuestionMark, ZoomIn, ZoomOut, Frame, CircleDot, PanelRight, User, Router, GraduationCap, Rocket, Volume2, VolumeX } from 'lucide-vue-next'
+import { Undo2, Redo2, Save, Upload, Download, ImageDown, CircleQuestionMark, ZoomIn, ZoomOut, Frame, CircleDot, PanelRight, User, Router, GraduationCap, Rocket, Volume2, VolumeX, Zap } from 'lucide-vue-next'
 import { useNet } from '../stores/net'
 import { useUi } from '../stores/ui'
 import { useGuide } from '../stores/guide'
@@ -26,6 +26,13 @@ async function png() {
 }
 function pick(e) { net.importFile(e.target.files[0]); e.target.value = '' }
 function help() { ui.openModal({ kind: 'help', title: 'Bantuan & pintasan' }) }
+function openFirewallFlow() {
+  ui.openModal({
+    kind: 'firewallFlow',
+    title: 'TACTICAL FIREWALL SCAN',
+    srcDevId: net.curId || Object.keys(net.devices)[0]
+  })
+}
 function account() { ui.panel = 'akun'; ui.sideOpen = true }
 const btn = 'flex items-center gap-1.5 px-2 py-1 text-2xs text-muted hover:bg-panel-2! hover:text-fg disabled:opacity-40 shrink-0 hex-clip glass'
 </script>
@@ -56,6 +63,7 @@ const btn = 'flex items-center gap-1.5 px-2 py-1 text-2xs text-muted hover:bg-pa
       <button :class="btn" title="Impor JSON" aria-label="Impor JSON" @click="fileInput.click()"><Upload :size="15" /><span class="hidden lg:inline hud-label">Impor JSON</span></button>
       <button :class="btn" title="Ekspor JSON" aria-label="Ekspor JSON" @click="net.exportFile()"><Download :size="15" /><span class="hidden lg:inline hud-label">Ekspor JSON</span></button>
       <button :class="btn" title="Ekspor PNG" aria-label="Ekspor PNG" @click="png"><ImageDown :size="15" /><span class="hidden lg:inline hud-label">Ekspor PNG</span></button>
+      <button :class="btn" title="Tactical Firewall Scan" aria-label="Tactical Firewall Scan" @click="openFirewallFlow"><Zap :size="15" /><span class="hidden lg:inline hud-label text-accent">Flow Scan</span></button>
       <button :class="btn" title="Bantuan" aria-label="Bantuan" @click="help"><CircleQuestionMark :size="15" /></button>
     </div>
 
