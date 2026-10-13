@@ -1,11 +1,15 @@
-import { Router, Network, Monitor, Server, Laptop } from 'lucide-vue-next'
+import RouterIcon from './components/icons/RouterIcon.vue'
+import SwitchIcon from './components/icons/SwitchIcon.vue'
+import PcIcon from './components/icons/PcIcon.vue'
+import ServerIcon from './components/icons/ServerIcon.vue'
+import LaptopIcon from './components/icons/LaptopIcon.vue'
 
 export const TYPES = [
-  { id: 'router', label: 'Router', color: 'var(--color-info)', Icon: Router },
-  { id: 'switch', label: 'Switch', color: 'var(--color-ok)', Icon: Network },
-  { id: 'pc', label: 'PC', color: 'var(--color-fg)', Icon: Monitor },
-  { id: 'server', label: 'Server', color: 'var(--color-accent)', Icon: Server },
-  { id: 'laptop', label: 'Laptop Wi-Fi', color: 'var(--color-wifi)', Icon: Laptop }
+  { id: 'router', label: 'Router', color: 'var(--color-info)', Icon: RouterIcon },
+  { id: 'switch', label: 'Switch', color: 'var(--color-ok)', Icon: SwitchIcon },
+  { id: 'pc', label: 'PC', color: 'var(--color-fg)', Icon: PcIcon },
+  { id: 'server', label: 'Server', color: 'var(--color-accent)', Icon: ServerIcon },
+  { id: 'laptop', label: 'Laptop Wi-Fi', color: 'var(--color-wifi)', Icon: LaptopIcon }
 ]
 
 export const CMDS = {

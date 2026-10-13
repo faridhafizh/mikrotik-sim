@@ -31,7 +31,7 @@ const item = 'flex flex-col items-center justify-center gap-1 w-[62px] lg:w-full
       :data-guide="t.id === 'router' ? 'add' : undefined"
       @dragstart="e => e.dataTransfer.setData('t', t.id)"
       @click="net.add(t.id, 200 + Math.random() * 400, 120 + Math.random() * 200)">
-      <component :is="t.Icon" :size="20" :color="t.color" />
+      <component :is="t.Icon" :size="26" :color="t.color" />
       <span class="hidden lg:inline text-[10px] font-medium leading-tight text-center">{{ t.label }}</span>
     </button>
 
