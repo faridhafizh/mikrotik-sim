@@ -1,87 +1,67 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ShieldCheck, Network, Zap, GraduationCap, ArrowRight } from 'lucide-vue-next'
 import { useUi } from '../stores/ui'
 import { useGuide } from '../stores/guide'
 
 const ui = useUi(), guide = useGuide()
-
-const LINES = [
-  'NANOSUIT 2.0 // ONLINE',
-  'NEURAL LINK … OK',
-  'TACTICAL NETWORK … OK'
-]
-
-const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false
-const shown = ref(reduced ? LINES.length : 0)
-let timers = []
-
-onMounted(() => {
-  if (reduced) return
-  // Staged reveal over ~1.6s: line i appears at i * ~520ms, last line + visor-in ≈ 1.6s.
-  LINES.forEach((_, i) => {
-    timers.push(setTimeout(() => { shown.value = i + 1 }, i * 520))
-  })
-})
-onBeforeUnmount(() => { timers.forEach(clearTimeout); timers = [] })
 
 function initiate() { ui.markBooted(); guide.reopen() }
 function skip() { ui.markBooted(); guide.finish() }
 </script>
 
 <template>
-  <div v-if="ui.welcome" class="fixed inset-0 z-40 bg-canvas/95 backdrop-blur-sm grid place-items-center p-4 scanlines">
-    <div class="relative w-[min(600px,calc(100vw-2rem))]">
-      <!-- corner brackets (outside hex-clip so they aren't clipped) -->
-      <span class="pointer-events-none absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-accent opacity-70 z-10" />
-      <span class="pointer-events-none absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-accent opacity-70 z-10" />
-      <span class="pointer-events-none absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-accent opacity-70 z-10" />
-      <span class="pointer-events-none absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-accent opacity-70 z-10" />
-
-      <div class="glass hex-clip border border-accent/35 p-6 shadow-panel">
-      <div class="flex items-center justify-between">
-        <span class="hud-label text-[11px] text-dim">BOOT SEQUENCE</span>
-        <span class="hud-label text-[11px] text-accent">v2.0</span>
+  <div v-if="ui.welcome" class="fixed inset-0 z-40 bg-black/60 backdrop-blur-md grid place-items-center p-4">
+    <div class="relative w-[min(560px,calc(100vw-2rem))] bg-chrome border border-line rounded-2xl p-6 shadow-2xl">
+      <div class="flex items-center gap-3 border-b border-line pb-4">
+        <div class="w-10 h-10 rounded-xl bg-accent/15 border border-accent/40 text-accent grid place-items-center shrink-0">
+          <ShieldCheck :size="22" />
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-fg leading-tight">PUSAT OPERASI JARINGAN</h2>
+          <p class="text-xs text-muted">Selamat Datang di Sistem Simulasi RouterOS MikroLab</p>
+        </div>
       </div>
 
-      <div class="mt-4 min-h-[84px] flex flex-col gap-2">
-        <p
-          v-for="line in LINES.slice(0, shown)"
-          :key="line"
-          class="visor-in hud-label text-[13px] text-fg flex items-center gap-2"
-        >
-          <span class="text-accent">&gt;</span>{{ line }}
-        </p>
+      <div class="my-5 space-y-3">
+        <div class="flex gap-3 p-3 rounded-lg bg-panel-2/60 border border-line/60">
+          <Network :size="20" class="text-accent shrink-0 mt-0.5" />
+          <div class="text-xs">
+            <b class="text-fg font-semibold block mb-0.5">Simulasi RouterOS Real-Time</b>
+            <span class="text-muted leading-relaxed">Rancang topologi L2/L3, atur IP address, rute statis/dynamic OSPF, VLAN trunking, dan uji CLI RouterOS secara langsung.</span>
+          </div>
+        </div>
+
+        <div class="flex gap-3 p-3 rounded-lg bg-panel-2/60 border border-line/60">
+          <Zap :size="20" class="text-accent shrink-0 mt-0.5" />
+          <div class="text-xs">
+            <b class="text-fg font-semibold block mb-0.5">Analisis Firewall & Packet Flow</b>
+            <span class="text-muted leading-relaxed">Visualisasikan lintasan paket data hop-by-hop melalui tabel NAT, Filter Rule, Prerouting, dan Forwarding.</span>
+          </div>
+        </div>
+
+        <div class="flex gap-3 p-3 rounded-lg bg-panel-2/60 border border-line/60">
+          <GraduationCap :size="20" class="text-accent shrink-0 mt-0.5" />
+          <div class="text-xs">
+            <b class="text-fg font-semibold block mb-0.5">Laboratorium & Modul Misi Praktis</b>
+            <span class="text-muted leading-relaxed">Selesaikan tantangan simulasi jaringan interaktif dengan verifikasi objektif otomatis.</span>
+          </div>
+        </div>
       </div>
 
-      <div class="mt-2 h-1.5 bg-panel-2 border border-line overflow-hidden">
-        <div class="h-full bg-accent boot-bar" :style="reduced ? { width: '100%' } : undefined" />
-      </div>
-
-      <div class="mt-6 flex items-center gap-4">
+      <div class="flex items-center justify-between pt-2">
         <button
-          class="hex-clip px-4 py-2 bg-accent text-accent-fg hud-label text-[12px] font-bold hover:opacity-90 transition-opacity"
-          @click="initiate"
-        >Initiate deployment</button>
-        <button
-          class="hud-label text-[11px] text-muted hover:text-accent underline-offset-4 hover:underline transition-colors"
+          class="text-xs text-muted hover:text-fg underline-offset-4 hover:underline transition-colors px-1"
           @click="skip"
-        >Skip</button>
-      </div>
+        >Langsung Ke Kanvas</button>
+
+        <button
+          class="flex items-center gap-2 px-5 py-2 bg-accent text-accent-fg rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity shadow-sm"
+          @click="initiate"
+        >
+          <span>Mulai Tur Panduan</span>
+          <ArrowRight :size="14" />
+        </button>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-@keyframes boot-bar {
-  from { width: 0 }
-  to { width: 100% }
-}
-.boot-bar {
-  width: 0;
-  animation: boot-bar 1.6s ease-out forwards;
-}
-@media (prefers-reduced-motion: reduce) {
-  .boot-bar { animation: none; width: 100% }
-}
-</style>

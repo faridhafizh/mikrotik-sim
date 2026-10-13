@@ -31,7 +31,6 @@ onUnmounted(() => {
 })
 function esc(e) { if (e.key === 'Escape' && ui.menu) { e.preventDefault(); close() } }
 
-// kanvas bergerak → menu tidak lagi menempel pada node
 watch(() => ui.zoom, close)
 watch(() => ui.pan, close, { deep: true })
 
@@ -58,46 +57,46 @@ async function noteDel() { const id = ui.menu.noteId; close(); await confirmRemo
 </script>
 
 <template>
-  <div v-if="ui.menu" ref="el" role="menu" aria-label="Menu perangkat"
-    class="glass hex-clip fixed z-50 w-[200px] py-1 border border-line rounded-panel shadow-panel" :style="pos()">
+  <div v-if="ui.menu" ref="el" role="menu" aria-label="Menu opsi"
+    class="bg-chrome border border-line rounded-xl shadow-xl fixed z-50 w-[200px] py-1" :style="pos()">
     <template v-if="ui.menu.templates">
-      <button v-for="t in TEMPLATES" :key="t.id" role="menuitem" class="w-full flex flex-col items-start gap-0.5 px-3 py-1.5 text-[13px] text-fg hover:bg-panel-2" @click="applyTemplate(t.id)">
-        <b class="text-[12px]">{{ t.title }}</b>
+      <button v-for="t in TEMPLATES" :key="t.id" role="menuitem" class="w-full flex flex-col items-start gap-0.5 px-3 py-1.5 text-[13px] text-fg hover:bg-panel-2 transition-colors" @click="applyTemplate(t.id)">
+        <b class="text-[12px] font-semibold">{{ t.title }}</b>
         <span class="text-2xs text-muted">{{ t.desc }}</span>
       </button>
     </template>
-    <template v-if="ui.menu.noteId">
-      <button role="menuitem" class="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-fg hover:bg-panel-2" @click="noteRename">
+    <template v-else-if="ui.menu.noteId">
+      <button role="menuitem" class="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-fg hover:bg-panel-2 transition-colors" @click="noteRename">
         <SquarePen :size="15" class="text-muted" />Ubah judul…
       </button>
-      <div class="flex items-center gap-1.5 px-3 py-1.5">
+      <div class="flex items-center gap-1.5 px-3 py-1.5 border-y border-line/40 my-1">
         <button v-for="c in NOTE_COLORS" :key="c" class="w-[18px] h-[18px] rounded-full border-2" :aria-label="c"
           :style="{ background: c, borderColor: curNote && curNote.color === c ? '#fff' : 'rgba(255,255,255,.25)' }"
           @click="noteColor(c)"></button>
       </div>
-      <button role="menuitem" class="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-fg hover:bg-panel-2" @click="noteFront">
+      <button role="menuitem" class="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-fg hover:bg-panel-2 transition-colors" @click="noteFront">
         <ArrowUpToLine :size="15" class="text-muted" />Pindah ke depan
       </button>
-      <button role="menuitem" class="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-fg hover:bg-panel-2" @click="noteBack">
+      <button role="menuitem" class="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-fg hover:bg-panel-2 transition-colors" @click="noteBack">
         <ArrowDownToLine :size="15" class="text-muted" />Pindah ke belakang
       </button>
-      <button role="menuitem" class="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-danger hover:bg-panel-2" @click="noteDel">
+      <button role="menuitem" class="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-danger hover:bg-danger/10 transition-colors font-medium" @click="noteDel">
         <Trash2 :size="15" />Hapus catatan
       </button>
     </template>
     <template v-else>
-      <button role="menuitem" class="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-fg hover:bg-panel-2" @click="config">
-        <SlidersHorizontal :size="15" class="text-muted" />Konfigurasi.
+      <button role="menuitem" class="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-fg hover:bg-panel-2 transition-colors" @click="config">
+        <SlidersHorizontal :size="15" class="text-muted" />Konfigurasi
       </button>
-    <button role="menuitem" class="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-fg hover:bg-panel-2" @click="terminal">
-      <Terminal :size="15" class="text-muted" />Buka terminal
-    </button>
-    <button role="menuitem" class="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-fg hover:bg-panel-2" @click="rename">
-      <SquarePen :size="15" class="text-muted" />Ubah nama…
-    </button>
-    <button role="menuitem" class="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-danger hover:bg-panel-2" @click="del">
-      <Trash2 :size="15" />Hapus perangkat
-    </button>
+      <button role="menuitem" class="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-fg hover:bg-panel-2 transition-colors" @click="terminal">
+        <Terminal :size="15" class="text-muted" />Buka terminal
+      </button>
+      <button role="menuitem" class="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-fg hover:bg-panel-2 transition-colors" @click="rename">
+        <SquarePen :size="15" class="text-muted" />Ubah nama…
+      </button>
+      <button role="menuitem" class="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-danger hover:bg-danger/10 transition-colors font-medium" @click="del">
+        <Trash2 :size="15" />Hapus perangkat
+      </button>
     </template>
   </div>
 </template>

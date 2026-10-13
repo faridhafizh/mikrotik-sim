@@ -3,51 +3,89 @@
 @source "../**/*.js";
 
 @theme {
-  --color-canvas: #04090f;
-  --color-chrome: #071522;
-  --color-panel: rgba(10, 26, 40, .78);
-  --color-panel-2: #0e2a44;
-  --color-node: #0b2237;
-  --color-line: #1b3f5e;
-  --color-line-strong: #2e6a99;
-  --color-fg: #dff3ff;
-  --color-muted: #9fc3dd;
-  --color-dim: #6d93ad;
-  --color-accent: #00e5ff;
-  --color-accent-soft: #7df3ff;
-  --color-accent-fg: #03161d;
-  --color-ok: #3dffa2;
-  --color-danger: #ff5d5d;
-  --color-info: #00e5ff;
-  --color-wifi: #b28bff;
-  --color-grid: #0d2a42;
-  --color-grid-strong: #174a75;
-  --color-cable: #41c8e8;
-  --color-suit-power: #ff7a1a;
-  --color-suit-armor: #00e5ff;
-  --color-suit-cloak: #b28bff;
+  --color-canvas: var(--bg-canvas, #090d16);
+  --color-chrome: var(--bg-chrome, #0f172a);
+  --color-panel: var(--bg-panel, rgba(30, 41, 59, 0.85));
+  --color-panel-2: var(--bg-panel-2, #1e293b);
+  --color-node: var(--bg-node, #1e293b);
+  --color-line: var(--border-line, #334155);
+  --color-line-strong: var(--border-line-strong, #475569);
+  --color-fg: var(--text-fg, #f8fafc);
+  --color-muted: var(--text-muted, #cbd5e1);
+  --color-dim: var(--text-dim, #64748b);
+  --color-accent: var(--brand-accent, #3b82f6);
+  --color-accent-soft: var(--brand-accent-soft, #60a5fa);
+  --color-accent-fg: #ffffff;
+  --color-ok: var(--brand-ok, #10b981);
+  --color-danger: var(--brand-danger, #ef4444);
+  --color-info: var(--brand-info, #0ea5e9);
+  --color-wifi: var(--brand-wifi, #8b5cf6);
+  --color-grid: var(--canvas-grid, #1e293b);
+  --color-grid-strong: var(--canvas-grid-strong, #334155);
+  --color-cable: var(--canvas-cable, #3b82f6);
   --font-sans: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono Variable', ui-monospace, 'Cascadia Mono', Consolas, monospace;
-  --radius-ctl: 10px;
-  --radius-panel: 14px;
+  --radius-ctl: 8px;
+  --radius-panel: 12px;
   --radius-pill: 999px;
-  --shadow-panel: 0 10px 30px rgba(3, 12, 24, .45);
+  --shadow-panel: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
   --text-2xs: 10px;
   --text-2xs--line-height: 14px;
 }
 
-/* Suit-mode accent override: consumed via var(--suit-accent) / text-accent / border-accent */
-:root { --suit-accent: var(--color-suit-armor) }
-[data-suit="power"] { --suit-accent: var(--color-suit-power); --color-accent: var(--color-suit-power) }
-[data-suit="armor"] { --suit-accent: var(--color-suit-armor); --color-accent: var(--color-suit-armor) }
-[data-suit="cloak"] { --suit-accent: var(--color-suit-cloak); --color-accent: var(--color-suit-cloak) }
+/* Government Theme Mode tokens (Default Dark Mode & Light Mode) */
+:root, [data-theme="dark"] {
+  --suit-accent: var(--color-accent);
+  --bg-canvas: #090d16;
+  --bg-chrome: #0f172a;
+  --bg-panel: rgba(30, 41, 59, 0.9);
+  --bg-panel-2: #1e293b;
+  --bg-node: #1e293b;
+  --border-line: #334155;
+  --border-line-strong: #475569;
+  --text-fg: #f8fafc;
+  --text-muted: #cbd5e1;
+  --text-dim: #64748b;
+  --brand-accent: #3b82f6;
+  --brand-accent-soft: #60a5fa;
+  --brand-ok: #10b981;
+  --brand-danger: #ef4444;
+  --brand-info: #0ea5e9;
+  --brand-wifi: #8b5cf6;
+  --canvas-grid: #1e293b;
+  --canvas-grid-strong: #334155;
+  --canvas-cable: #3b82f6;
+}
+
+[data-theme="light"] {
+  --suit-accent: var(--color-accent);
+  --bg-canvas: #f1f5f9;
+  --bg-chrome: #ffffff;
+  --bg-panel: rgba(255, 255, 255, 0.95);
+  --bg-panel-2: #f8fafc;
+  --bg-node: #ffffff;
+  --border-line: #cbd5e1;
+  --border-line-strong: #94a3b8;
+  --text-fg: #0f172a;
+  --text-muted: #334155;
+  --text-dim: #64748b;
+  --brand-accent: #1d4ed8;
+  --brand-accent-soft: #2563eb;
+  --brand-ok: #15803d;
+  --brand-danger: #b91c1c;
+  --brand-info: #0284c7;
+  --brand-wifi: #6d28d9;
+  --canvas-grid: #e2e8f0;
+  --canvas-grid-strong: #cbd5e1;
+  --canvas-cable: #2563eb;
+}
 
 @layer base {
   html, body, #app { height: 100%; margin: 0 }
   body { background: var(--color-canvas); color: var(--color-fg); font-family: var(--font-sans); overscroll-behavior: none }
   :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 6px }
-  ::-webkit-scrollbar { width: 10px; height: 10px }
-  ::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 999px; border: 2px solid var(--color-panel) }
+  ::-webkit-scrollbar { width: 8px; height: 8px }
+  ::-webkit-scrollbar-thumb { background: var(--color-line-strong); border-radius: 999px }
   ::-webkit-scrollbar-track { background: transparent }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important } }
 }
@@ -75,58 +113,41 @@
   background: var(--color-line-strong);
 }
 
-/* Satu-satunya CSS khusus kanvas: hal yang tidak bisa jadi atribut SVG (interaksi/animasi). */
+/* Canvas SVG Animations */
 .wifi-flow { stroke-dasharray: 6 6; animation: dash 1s linear infinite }
 @keyframes dash { to { stroke-dashoffset: -12 } }
 .cable-flow { stroke-dasharray: 2 10; animation: cable-flow 1.2s linear infinite }
 @keyframes cable-flow { to { stroke-dashoffset: -24 } }
 .pkt-move { transition: transform .42s ease-in-out }
 .dev-hit { cursor: grab }
-.dev-hit:hover { filter: brightness(1.12) }
+.dev-hit:hover { filter: brightness(1.08) }
 
-/* Nanosuit HUD utilities — in @layer components so Tailwind utilities
-   (position, text-*, bg-*) still override them when both are applied. */
+/* Government UI Utilities */
 @layer components {
   .hud-label {
     font-family: var(--font-mono);
     text-transform: uppercase;
-    letter-spacing: .12em;
+    letter-spacing: .08em;
     font-size: var(--text-2xs);
     line-height: var(--text-2xs--line-height);
   }
   .glass {
-    background: linear-gradient(180deg, rgba(13, 38, 60, .85), rgba(6, 18, 30, .85));
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: var(--color-panel);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
   .hex-clip {
-    clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+    border-radius: 8px;
   }
-  .scanlines { position: relative }
-  .scanlines::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: repeating-linear-gradient(180deg, rgba(0, 229, 255, .04) 0 1px, transparent 1px 3px);
-    mix-blend-mode: screen;
+  .scanlines {
+    position: relative;
   }
-  .suit-glow { animation: suit-glow 2.4s ease-in-out infinite }
   .caret-blink { animation: hex-pulse 1.05s step-end infinite }
-  .visor-in { animation: visor-in .5s ease-out both }
 }
-@keyframes visor-in {
-  0% { opacity: 0; transform: scaleY(.008); filter: brightness(3) }
-  40% { opacity: 1; filter: brightness(1.6) }
-  100% { opacity: 1; transform: scaleY(1); filter: brightness(1) }
-}
+
 @keyframes hex-pulse {
   0%, 100% { opacity: .55 }
   50% { opacity: 1 }
-}
-@keyframes suit-glow {
-  0%, 100% { box-shadow: 0 0 4px 0 color-mix(in srgb, var(--suit-accent) 45%, transparent) }
-  50% { box-shadow: 0 0 14px 2px color-mix(in srgb, var(--suit-accent) 65%, transparent) }
 }
 
 /* Inspector: bagian lanjutan di mode pemula pakai <details> tanpa marker bawaan */
