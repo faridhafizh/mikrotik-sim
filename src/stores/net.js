@@ -5,11 +5,13 @@ import { useUi } from './ui'
 import { NOTE_COLORS, NOTE_MIN_W, NOTE_MIN_H } from '../zoom'
 import { CABLE_TYPES, buildIfaces, defaultProfileFor, isCableKind, isCableType, linkStatus, migrateTopo, profileById } from '../linkmodel.js'
 import { topoSummary } from '../versions.js'
+import { tauriExecCommand, tauriEvaluateLab } from '../tauri_bridge.js'
+
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 let n = 0
 let m = 0
 const MAX_HIST = 50
-// validateTopo murni (mirror okTopo server/index.js:11 + cek field device/link)
+
 export function validateTopo(t) {
   const td = t && t.data && validateTopo(t.data) ? t.data : null
   if (td) return true
@@ -40,13 +42,14 @@ export function validateTopo(t) {
   }
   return true
 }
+
 const PFX = { router: 'R', switch: 'SW', pc: 'PC', server: 'SRV', laptop: 'LT' }
-const reduceMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
+const reduceMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
 
 export const useNet = defineStore('net', {
   state: () => {
-    const sv = JSON.parse(localStorage.getItem('ml') || 'null')
-    const customLabs = (() => { try { return JSON.parse(localStorage.getItem('ml.customLabs') || '[]') } catch { return [] } })()
+    const sv = typeof localStorage !== 'undefined' ? JSON.parse(localStorage.getItem('ml') || 'null') : null
+    const customLabs = (() => { try { return typeof localStorage !== 'undefined' ? JSON.parse(localStorage.getItem('ml.customLabs') || '[]') : [] } catch { return [] } })()
     return { devices: {}, links: [], notes: {}, selected: null, selectedNote: null, tool: 'select', from: null, term: {}, packet: null, api: 'unknown', dirty: false, token: sv?.t || '', user: sv?.u || '', labs: [], customLabs, activeLab: 'lab1', results: {}, topologies: [], done: [], curId: null, past: [], future: [], traceOverlay: null, stats: {}, stepResults: {}, versions: [] }
   },
   actions: {
@@ -101,7 +104,6 @@ export const useNet = defineStore('net', {
       const old = new Map((d.ifaces || []).map(i => [i.name, i]))
       const ifaces = next.map(i => { const o = old.get(i.name); return o?.addr ? { ...i, addr: o.addr } : { ...i } })
       const names = new Set(ifaces.map(i => i.name))
-      // vlan/bridge di luar profil dipertahankan bila tidak merujuk nama yang hilang
       const extra = (d.ifaces || []).filter(i => !names.has(i.name) && (i.vlan ? names.has(i.parent) : i.members ? (i.members || []).every(m => names.has(m)) : false))
       const combined = [...ifaces, ...extra]
       const live = new Set(combined.map(i => i.name))
@@ -140,8 +142,16 @@ export const useNet = defineStore('net', {
       const d = this.devices[this.selected]
       if (!d) return
       this.commit()
-      const r = exec(this, d, line)
-      // cls / system reboot: terminal direset (perintah + hasil tetap tampil)
+
+      const tauriRes = await tauriExecCommand(this.snap(), d.id, line)
+      let r
+      if (tauriRes) {
+        r = tauriRes.res
+        this.restore(tauriRes.updatedNet)
+      } else {
+        r = exec(this, d, line)
+      }
+
       if (r.clear && this.term[d.id]) this.term[d.id].length = 0
       const t = (this.term[d.id] ??= [])
       t.push('> ' + line)
@@ -188,7 +198,6 @@ export const useNet = defineStore('net', {
     },
     snap() { return JSON.parse(JSON.stringify({ devices: this.devices, links: this.links, notes: this.notes })) },
     restore(t) {
-      // undo mengembalikan topologi saja; log terminal (term) disengaja tidak di-snapshot
       const src = t || {}
       migrateTopo({ devices: src.devices, links: src.links })
       this.devices = src.devices || {}; this.links = src.links || []; this.notes = src.notes || {}; this.selected = null; this.selectedNote = null; this.term = {}
@@ -282,12 +291,12 @@ export const useNet = defineStore('net', {
       const idx = this.customLabs.findIndex(x => x.id === lab.id)
       if (idx >= 0) this.customLabs[idx] = lab
       else this.customLabs.push(lab)
-      try { localStorage.setItem('ml.customLabs', JSON.stringify(this.customLabs)) } catch {}
+      try { if (typeof localStorage !== 'undefined') localStorage.setItem('ml.customLabs', JSON.stringify(this.customLabs)) } catch {}
       this.syncLabs()
     },
     removeCustomLab(id) {
       this.customLabs = this.customLabs.filter(x => x.id !== id)
-      try { localStorage.setItem('ml.customLabs', JSON.stringify(this.customLabs)) } catch {}
+      try { if (typeof localStorage !== 'undefined') localStorage.setItem('ml.customLabs', JSON.stringify(this.customLabs)) } catch {}
       this.syncLabs()
     },
     syncLabs() {
@@ -300,8 +309,10 @@ export const useNet = defineStore('net', {
       const base = res?.labs || []
       this.baseLabs = base
       this.labs = [...base, ...this.customLabs]
-      const h = location.hash.match(/^#\/s\/(\w+)/)
-      if (h) { const r = await this.call('/shared/' + h[1]); if (r) { this.commit(); this.restore(r.data); this.note('Topologi bersama: ' + r.name, 'info') } }
+      if (typeof location !== 'undefined') {
+        const h = location.hash.match(/^#\/s\/(\w+)/)
+        if (h) { const r = await this.call('/shared/' + h[1]); if (r) { this.commit(); this.restore(r.data); this.note('Topologi bersama: ' + r.name, 'info') } }
+      }
       if (this.token) await this.refresh()
     },
     async refresh() {
@@ -310,14 +321,13 @@ export const useNet = defineStore('net', {
       if (b) this.done = b.passed
     },
     async auth(mode, username, password) {
-      // throwOnError: pemanggil menampilkan pesan server secara inline (toast tetap muncul dari call())
       const r = await this.call('/' + mode, { method: 'POST', body: { username, password }, throwOnError: true })
       this.token = r.token; this.user = r.username
-      localStorage.setItem('ml', JSON.stringify({ t: r.token, u: r.username }))
+      if (typeof localStorage !== 'undefined') localStorage.setItem('ml', JSON.stringify({ t: r.token, u: r.username }))
       this.note('Halo, ' + r.username, 'success')
       await this.refresh()
     },
-    logout() { this.token = ''; this.user = ''; this.topologies = []; this.done = []; this.curId = null; localStorage.removeItem('ml') },
+    logout() { this.token = ''; this.user = ''; this.topologies = []; this.done = []; this.curId = null; if (typeof localStorage !== 'undefined') localStorage.removeItem('ml') },
     async save(name) {
       const data = this.snap()
       const body = { name: this.curId ? null : (name || 'Topologi').slice(0, 80), data, summary: topoSummary(data) }
@@ -376,29 +386,34 @@ export const useNet = defineStore('net', {
     async checkLab(id) {
       const lab = this.labs.find(l => l.id === id)
       if (lab && lab.custom) {
-        const results = []
-        for (const obj of lab.objectives || []) {
-          if (obj.type === 'ping') {
-            const srcDev = Object.keys(this.devices)[0]
-            const p = srcDev ? (await import('../engine.js')).ping(this, srcDev, obj.target) : { ok: false }
-            results.push({ label: obj.label || `Ping reachability to ${obj.target}`, ok: p.ok })
-          } else if (obj.type === 'ifaceIp') {
-            const [devName, ipCidr] = (obj.target || '').split(':')
-            const dev = Object.values(this.devices).find(d => d.name === devName)
-            const has = dev?.ifaces?.some(i => i.addr === ipCidr)
-            results.push({ label: obj.label || `Interface IP ${obj.target}`, ok: !!has })
-          } else if (obj.type === 'route') {
-            const [devName, dstGw] = (obj.target || '').split(':')
-            const dev = Object.values(this.devices).find(d => d.name === devName)
-            const has = dev?.routes?.some(r => `${r.dst}->${r.gw}` === dstGw || r.dst === dstGw)
-            results.push({ label: obj.label || `Route check ${obj.target}`, ok: !!has })
-          } else if (obj.type === 'fw') {
-            const [devName, chainAction] = (obj.target || '').split(':')
-            const dev = Object.values(this.devices).find(d => d.name === devName)
-            const has = dev?.fw?.some(f => `${f.chain}=${f.action}` === chainAction || f.chain === chainAction)
-            results.push({ label: obj.label || `Firewall rule check ${obj.target}`, ok: !!has })
-          } else {
-            results.push({ label: obj.label || 'Objective check', ok: true })
+        const tauriLabRes = await tauriEvaluateLab(this.snap(), lab)
+        let results = []
+        if (tauriLabRes) {
+          results = tauriLabRes
+        } else {
+          for (const obj of lab.objectives || []) {
+            if (obj.type === 'ping') {
+              const srcDev = Object.keys(this.devices)[0]
+              const p = srcDev ? (await import('../engine.js')).ping(this, srcDev, obj.target) : { ok: false }
+              results.push({ label: obj.label || `Ping reachability to ${obj.target}`, ok: p.ok })
+            } else if (obj.type === 'ifaceIp') {
+              const [devName, ipCidr] = (obj.target || '').split(':')
+              const dev = Object.values(this.devices).find(d => d.name === devName)
+              const has = dev?.ifaces?.some(i => i.addr === ipCidr)
+              results.push({ label: obj.label || `Interface IP ${obj.target}`, ok: !!has })
+            } else if (obj.type === 'route') {
+              const [devName, dstGw] = (obj.target || '').split(':')
+              const dev = Object.values(this.devices).find(d => d.name === devName)
+              const has = dev?.routes?.some(r => `${r.dst}->${r.gw}` === dstGw || r.dst === dstGw)
+              results.push({ label: obj.label || `Route check ${obj.target}`, ok: !!has })
+            } else if (obj.type === 'fw') {
+              const [devName, chainAction] = (obj.target || '').split(':')
+              const dev = Object.values(this.devices).find(d => d.name === devName)
+              const has = dev?.fw?.some(f => `${f.chain}=${f.action}` === chainAction || f.chain === chainAction)
+              results.push({ label: obj.label || `Firewall rule check ${obj.target}`, ok: !!has })
+            } else {
+              results.push({ label: obj.label || 'Objective check', ok: true })
+            }
           }
         }
         const passed = results.length > 0 && results.every(x => x.ok)
@@ -412,11 +427,11 @@ export const useNet = defineStore('net', {
       if (!r) return
       this.results = { ...this.results, [id]: r.results }
       this.stepResults = { ...this.stepResults, [id]: r.steps || [] }
-      const store = (() => { try { return JSON.parse(localStorage.getItem('ml.stepdone') || '{}') } catch { return {} } })()
+      const store = (() => { try { return typeof localStorage !== 'undefined' ? JSON.parse(localStorage.getItem('ml.stepdone') || '{}') : {} } catch { return {} } })()
       let lead = 0
       for (const s of r.steps || []) { if (s.results.every(x => x.ok)) lead++; else break }
       store[id] = Math.max(store[id] || 0, lead)
-      try { localStorage.setItem('ml.stepdone', JSON.stringify(store)) } catch {}
+      try { if (typeof localStorage !== 'undefined') localStorage.setItem('ml.stepdone', JSON.stringify(store)) } catch {}
       if (r.passed && !this.done.includes(id)) this.done.push(id)
       this.note(r.passed ? 'Lab lulus!' : 'Belum lulus, cek daftar syarat', r.passed ? 'success' : 'info')
     }
